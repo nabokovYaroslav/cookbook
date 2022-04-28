@@ -2,7 +2,7 @@ from django.db import transaction
 from rest_framework import serializers
 
 from recipes.models import Recipe, Ingredient, Step, Comment, View
-from recipes.fields import ImageField, RecursiveField, TumbnailImageField
+from recipes.fields import ImageField, RecursiveField, TumbnailImageField, CustomBase64ImageField
 from utils.file import compare_images
 
 
@@ -33,9 +33,17 @@ class StepSerializer(serializers.ModelSerializer):
         model = Step
         fields = '__all__'
 
+class StepCreateUpdateSerializer(serializers.ModelSerializer):
+    image = CustomBase64ImageField()
+
+    class Meta:
+        model = Step
+        fields = '__all__'
+
 class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
     ingredients = IgridientSerializer(many=True, required=True)
-    steps = StepSerializer(many=True, required=True)
+    steps = StepCreateUpdateSerializer(many=True, required=True)
+    image = CustomBase64ImageField()
 
     def validate_ingredients(self, ingredients):
         for ingredient in ingredients:
@@ -67,7 +75,11 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         ingredient_data = validated_data.pop('ingredients', [])
+        if ingredient_data is None:
+            ingredient_data = []
         step_data = validated_data.pop('steps', [])
+        if step_data is None:
+            step_data = []
         with transaction.atomic():
             recipe = Recipe.objects.create(**validated_data)
             

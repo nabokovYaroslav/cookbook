@@ -1,5 +1,8 @@
 from rest_framework.fields import ImageField as BaseImageField
 from rest_framework.serializers import Serializer
+from drf_extra_fields.fields import Base64ImageField
+from django.core.exceptions import ValidationError
+from django.utils.translation import gettext_lazy as _
 
 from utils.image import get_adaptive_image, get_tumbnail
 from utils.srcset import get_srcset
@@ -29,3 +32,9 @@ class RecursiveField(Serializer):
         # self.parent.parent.__class__ equal serailizer where this field declared
         serializer = self.parent.parent.__class__(value, context=self.context)
         return serializer.data
+
+class CustomBase64ImageField(Base64ImageField):
+    def to_internal_value(self, base64_data):
+        if base64_data in self.EMPTY_VALUES:
+            raise ValidationError(_("Invalid type. This is not an base64 string: {}".format(type(base64_data))))
+        return super().to_internal_value(base64_data)

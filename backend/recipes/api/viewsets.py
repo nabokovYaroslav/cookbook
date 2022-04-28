@@ -14,7 +14,6 @@ from recipes.models import Recipe
 
 class RecipeViewSet(ModelViewSet):
     def get_serializer_class(self):
-        print(self.request.content_type)
         if self.action == "list":
             return RecipeListSerializer
         elif self.action == "retrieve":

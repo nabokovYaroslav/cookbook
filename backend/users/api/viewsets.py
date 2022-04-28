@@ -14,7 +14,7 @@ class UserViewset(viewsets.ModelViewSet):
         if self.action == 'create':
             return RegisterUserSerializer
         elif self.action == "retrieve":
-            if IsOwnerOrIsAdmin.has_permission(request=self.request, view=self):
+            if IsOwnerOrIsAdmin().has_permission(request=self.request, view=self):
                 return UserSerializer
             else:
                 return UserBasicSerializer
