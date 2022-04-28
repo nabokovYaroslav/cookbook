@@ -1,0 +1,5 @@
+venv
+postgresql_dev
+backend/media/*/
+backend/media/!default
+frontend/node_modules
