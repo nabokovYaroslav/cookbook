@@ -42,7 +42,7 @@ class Recipe(models.Model):
     fat = models.PositiveIntegerField(verbose_name="Жиры", help_text="На одну порцию")
     carbohydrate = models.PositiveIntegerField(verbose_name="Углеводы", help_text="На одну порцию")
     count = models.PositiveSmallIntegerField(verbose_name="Количество порций", help_text="На скольких человек, расчитан рецепт")
-    image = models.ImageField(verbose_name="Фотография", upload_to=upload_to)
+    image = models.ImageField(verbose_name="Фотография", upload_to=upload_to, max_length=255)
 
     def save(self, *args, **kwargs):
         is_new_image = False
@@ -107,7 +107,7 @@ class Step(models.Model):
         return output_path
 
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, verbose_name="Рецепт", related_name="steps")
-    image = models.ImageField(verbose_name="Фотография", upload_to=upload_to)
+    image = models.ImageField(verbose_name="Фотография", upload_to=upload_to, max_length=255)
     description = models.TextField(verbose_name="Описание шага")
 
     objects = StepManager()
@@ -142,7 +142,7 @@ class Step(models.Model):
 
 class View(models.Model):
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, verbose_name="Пользователь")
-    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, verbose_name="Рецепт")
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name="views", verbose_name="Рецепт")
     datetime = models.DateTimeField(auto_now_add=True, verbose_name="Дата просмотра")
 
     class Meta:

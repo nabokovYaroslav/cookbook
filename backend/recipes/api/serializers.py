@@ -4,6 +4,7 @@ from rest_framework import serializers
 from recipes.models import Recipe, Ingredient, Step, Comment, View
 from recipes.fields import ImageField, RecursiveField, TumbnailImageField, CustomBase64ImageField
 from utils.file import compare_images
+from recipes.services import send_post_save_signals
 
 
 class RecipeListSerializer(serializers.ModelSerializer):
@@ -14,17 +15,39 @@ class RecipeListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Recipe
-        fields = ('name', 'description', 'category', 'category_name', 'time', 'image', 'count',
+        fields = ('id', 'name', 'description', 'category', 'category_name', 'time', 'image', 'count',
                   'views_count', 'comments_count',
                   )
 
-class IgridientSerializer(serializers.ModelSerializer):
+class IngredientCreateSerializer(serializers.ModelSerializer):
     unit_name = serializers.CharField(read_only=True, source='unit.name')
     unit_short_name = serializers.CharField(read_only=True, source="unit.short_name")
 
     class Meta:
         model = Ingredient
-        fields = ("id","name", "recipe", "unit", "unit_name", "unit_short_name", "value")
+        fields = ("id", "name", "unit", "unit_name", "unit_short_name", "value")
+
+class IngredientUpdateSerializer(serializers.ModelSerializer):
+    unit_name = serializers.CharField(read_only=True, source='unit.name')
+    unit_short_name = serializers.CharField(read_only=True, source="unit.short_name")
+
+    def to_internal_value(self, data):
+        obj = super().to_internal_value(data)
+        obj["id"] = data.get("id")
+        return obj
+
+    class Meta:
+        model = Ingredient
+        fields = ("id", "name", "unit", "unit_name", "unit_short_name", "value")
+        extra_kwargs = {
+            "id": {"allow_null": True}
+        }
+
+class IngredientSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = Ingredient
+        fields = '__all__'
 
 class StepSerializer(serializers.ModelSerializer):
     image = ImageField()
@@ -33,45 +56,33 @@ class StepSerializer(serializers.ModelSerializer):
         model = Step
         fields = '__all__'
 
-class StepCreateUpdateSerializer(serializers.ModelSerializer):
+class StepCreateSerializer(serializers.ModelSerializer):
     image = CustomBase64ImageField()
 
     class Meta:
         model = Step
-        fields = '__all__'
+        fields = ("id", "image", "description")
 
-class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
-    ingredients = IgridientSerializer(many=True, required=True)
-    steps = StepCreateUpdateSerializer(many=True, required=True)
+class StepUpdateSerializer(serializers.ModelSerializer):
     image = CustomBase64ImageField()
 
-    def validate_ingredients(self, ingredients):
-        for ingredient in ingredients:
-            id = ingredient.get("id", None)
-            if id is not None:
-                recipe_id = self.instance.id
-                try:
-                    Ingredient.objects.get(id=id, recipe_id=recipe_id)
-                except Ingredient.DoesNotExist:
-                    raise (
-                           serializers
-                           .ValidationError("Recipe with id={} has no Ingredient with id={}"
-                           .format(recipe_id, id))
-                           )
+    def to_internal_value(self, data):
+        obj = super().to_internal_value(data)
+        obj["id"] = data.get("id")
+        return obj
 
-    def validate_steps(self, steps):
-        for step in steps:
-            id = step.get("id", None)
-            if id is not None:
-                recipe_id = self.instance.id
-                try:
-                    Step.objects.get(id=id, recipe_id=recipe_id)
-                except Step.DoesNotExist:
-                    raise (
-                           serializers
-                           .ValidationError("Recipe with id={} has no Step with id={}"
-                           .format(recipe_id, id))
-                           )
+    class Meta:
+        model = Step
+        fields = ("id", "image", "description")
+        extra_kwargs = {
+            "id": {"allow_null": True}
+        }
+        
+
+class RecipeCreateSerialzer(serializers.ModelSerializer):
+    ingredients = IngredientCreateSerializer(many=True, required=True)
+    steps = StepCreateSerializer(many=True, required=True)
+    image = CustomBase64ImageField()
 
     def create(self, validated_data):
         ingredient_data = validated_data.pop('ingredients', [])
@@ -92,12 +103,74 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
             if ingrident_objects:
                 Ingredient.objects.bulk_create(ingrident_objects)
             if step_objects:   
-                Step.objects.bulk_create(step_objects)    
+                Step.objects.bulk_create(step_objects, batch_size=None, ignore_conflicts=False)    
         return recipe
+
+    class Meta:
+        model = Recipe
+        fields = (
+                  'id', 'name', 'description', 'result', 'category', 'user', 'time', 'colorie', 
+                  'protein', 'fat', 'carbohydrate', 'count', 'image', 'ingredients', 'steps',
+                  )
+
+class RecipeUpdateSerializer(serializers.ModelSerializer):
+    ingredients = IngredientUpdateSerializer(many=True, required=True)
+    steps = StepUpdateSerializer(many=True, required=True)
+    image = CustomBase64ImageField()
+
+    def validate_ingredients(self, ingredients):
+        for ingredient in ingredients:    
+            id = ingredient["id"]
+            if id is not None:
+                try:
+                    Ingredient.objects.get(id=id)
+                except Ingredient.DoesNotExist:
+                    raise (
+                            serializers
+                            .ValidationError("Ingredient with id={} does not exist"
+                            .format(id))
+                            )
+                try:
+                    recipe_id = self.instance.id
+                    Ingredient.objects.get(id=id, recipe_id=recipe_id)
+                except Ingredient.DoesNotExist:
+                    raise (
+                            serializers
+                            .ValidationError("Recipe with id={} has no Ingredient with id={}"
+                            .format(recipe_id, id))
+                            )
+        return ingredients
+
+    def validate_steps(self, steps):
+        for step in steps:
+            id = step["id"]
+            if id is not None:
+                try:
+                    Step.objects.get(id=id)
+                except Step.DoesNotExist:
+                    raise (
+                            serializers
+                            .ValidationError("Step with id={} does not exist"
+                            .format(id))
+                            )
+                recipe_id = self.instance.id
+                try:
+                    Step.objects.get(id=id, recipe_id=recipe_id)
+                except Step.DoesNotExist:
+                    raise (
+                           serializers
+                           .ValidationError("Recipe with id={} has no Step with id={}"
+                           .format(recipe_id, id))
+                           )
+        return steps
 
     def update(self, instance, validated_data):
         ingredient_data = validated_data.pop('ingredients', [])
+        if ingredient_data is None:
+            ingredient_data = []
         step_data = validated_data.pop('steps', [])
+        if step_data is None:
+            step_data = []
 
         ingredients = instance.ingredients.all()
         steps = instance.steps.all()
@@ -117,18 +190,17 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
         ingredient_data = [
                             {"recipe_id": instance.id, **ingredient} 
                             for ingredient in ingredient_data 
-                            if not "recipe_id" in ingredient
                             ]
             
         ingredient_objects_to_create = [
                                         Ingredient(**ingredient) 
                                         for ingredient in ingredient_data 
-                                        if ingredient.get('id', None) is None
+                                        if ingredient["id"] is None
                                         ]
         ingredient_objects_to_update = []
         ingredient_objects_to_delete = []
         for ingredient in ingredients:
-            new_data = next((item for item in ingredient_data if item.get("id", None) == ingredient.id), None)
+            new_data = next((item for item in ingredient_data if item["id"] == ingredient.id), None)
             if new_data is not None:
                 ingredient.name = new_data.get("name", ingredient.name)
                 ingredient.recipe_id = new_data.get("recipe_id", ingredient.recipe_id)
@@ -138,27 +210,20 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
             else:
                 ingredient_objects_to_delete.append(ingredient)
 
-        if step_data is not None:
-            step_data = [
-                         {"recipe_id": instance.id, **step}
-                         for step in step_data
-                         if not "recipe_id" in step
-                         ]
+        step_data = [
+                     {"recipe_id": instance.id, **step}
+                     for step in step_data
+                     ]
 
         step_objects_to_create = [
                                   Step(**step) 
                                   for step in step_data 
-                                  if step.get('id', None) is None
+                                  if step["id"] is None
                                   ]
         step_objects_to_update = []
-        # Objects whose picture has changed
-        # Since we handle saving the image in the .save() method, 
-        # we have to handle this ourselves, as the .save() method 
-        # is not called on bulk_create or bulk_update.
-        step_objects_image_updated = []
         step_objects_to_delete = []
         for step in steps:
-            new_data = next((item for item in step_data if item.get("id", None) == step.id), None)
+            new_data = next((item for item in step_data if item["id"] == step.id), None)
             if new_data is not None:
                 step.recipe_id = new_data.get("recipe_id", step.recipe_id)
                 step.image = new_data.get("image", step.image)
@@ -178,7 +243,8 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
 
             Step.objects.bulk_create(step_objects_to_create, batch_size=None, ignore_conflicts=False)
             if steps is not None:
-                Step.objects.bulk_update(step_objects_to_update, batch_size=None, fields=["recipe_id", "image", "description"], step_objects_image_updated=step_objects_image_updated)
+                for step in step_objects_to_update:
+                    step.save()
                 for step in step_objects_to_delete:
                     step.delete()
         return instance
@@ -191,7 +257,7 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
                   )
 
 class RecipeRetrieveSerializer(serializers.ModelSerializer):
-    ingredients = IgridientSerializer(many=True)
+    ingredients = IngredientSerializer(many=True)
     steps = StepSerializer(many=True)
     category_name = serializers.CharField(read_only=True, source='category.name')
     user_name = serializers.CharField(read_only=True, source='user.user_name')
@@ -240,7 +306,8 @@ class RecipeWidgetSerializer(serializers.ModelSerializer):
         fields = ("name", "time", "category", "category_name", "count", "image")
 
 class RecipeSearchSerializer(serializers.ModelSerializer):
-
+    category_name = serializers.CharField(read_only=True, source='category.name')
+    image = TumbnailImageField()
     class Meta:
         model = Recipe
         fields = ("name", "time", "category", "category_name", "count", "image")

@@ -12,7 +12,6 @@ def compare_images(existing_image_path : str, image_in_memory: InMemoryUploadedF
 	tmp_file = os.path.join(settings.MEDIA_ROOT, path)
 	equal = False
 	if filecmp.cmp(existing_image_path, tmp_file, shallow=False):
-		print("equal")
 		equal = True
 	os.remove(tmp_file)
 	return equal
