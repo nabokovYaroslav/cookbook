@@ -6,22 +6,12 @@ from utils.image import (change_resolution_of_image, delete_images, create_adapt
                          create_adaptive_format_image) 
 
 @receiver(post_save, sender=Step)
-def step_update_image(sender, image_was_update=False, old_path="", **kwargs):
-  print(old_path)
-  if image_was_update:
+def step_created(sender, is_new=None, **kwargs):
+  if is_new:
     instance = kwargs["instance"]
-    print(instance.image.path)
-    delete_images(old_path)
     change_resolution_of_image(instance.image.path)
     create_adaptive_resolution_image(instance.image.path, formatting=True)
     create_adaptive_format_image(instance.image.path)
-
-@receiver(post_save, sender=Step)
-def step_created(sender, **kwargs):
-  instance = kwargs["instance"]
-  change_resolution_of_image(instance.image.path)
-  create_adaptive_resolution_image(instance.image.path, formatting=True)
-  create_adaptive_format_image(instance.image.path)
 
 @receiver(post_delete, sender=Recipe)
 def recipe_delete_images(sender, **kwargs):

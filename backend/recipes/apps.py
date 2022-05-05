@@ -7,5 +7,5 @@ class RecipesConfig(AppConfig):
     verbose_name = "Рецепты"
 
     def ready(self):
-        from recipes.signals import recipe_delete_images, step_delete_images, step_update_image, step_created
+        from recipes.signals import recipe_delete_images, step_delete_images, step_created
         return super().ready()

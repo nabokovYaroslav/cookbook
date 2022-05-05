@@ -7,5 +7,5 @@ class StepManager(Manager):
     def bulk_create(self, objs, batch_size, ignore_conflicts):
         created_list = super().bulk_create(objs, batch_size, ignore_conflicts)
         for step_object in objs:
-            post_save.send(sender=step_object.__class__, instance=step_object)
+            post_save.send(sender=step_object.__class__, instance=step_object, is_new=True)
         return created_list

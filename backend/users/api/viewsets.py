@@ -18,7 +18,13 @@ class UserViewset(viewsets.ModelViewSet):
                 return UserSerializer
             else:
                 return UserBasicSerializer
-        return UserSerializer  
+        return UserSerializer 
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        if self.action in ("list", "retrieve"):
+            context["extension_image"] = self.request.META["extension_image"]
+        return context 
 
     def get_permissions(self):
         if self.action == 'list':

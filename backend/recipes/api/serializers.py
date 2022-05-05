@@ -1,10 +1,9 @@
 from django.db import transaction
 from rest_framework import serializers
 
-from recipes.models import Recipe, Ingredient, Step, Comment, View
+from recipes.models import Recipe, Ingredient, Step, Comment, View, Category
 from recipes.fields import ImageField, RecursiveField, TumbnailImageField, CustomBase64ImageField
-from utils.file import compare_images
-from recipes.services import send_post_save_signals
+from users.api.serializers import UserBasicSerializer
 
 
 class RecipeListSerializer(serializers.ModelSerializer):
@@ -277,14 +276,14 @@ class RecipeDestroySerializer(serializers.ModelSerializer):
     class Meta:
         fields = "__all__"
 
-class CommentListRetrieveSerializer(serializers.ModelSerializer):
+class CommentListSerializer(serializers.ModelSerializer):
     answers = RecursiveField(many=True, read_only=True)
-
+    user = UserBasicSerializer(read_only=True)
     class Meta:
         model = Comment
         fields = ("user", "reply_to", "recipe", "text", "datetime", "answers")
 
-class CommentCreateUpdateDestroySerializer(serializers.ModelSerializer):
+class CommentCreateDestroySerializer(serializers.ModelSerializer):
     datetime = serializers.DateTimeField(read_only=True)
 
     class Meta:
@@ -305,9 +304,27 @@ class RecipeWidgetSerializer(serializers.ModelSerializer):
         model = Recipe
         fields = ("name", "time", "category", "category_name", "count", "image")
 
-class RecipeSearchSerializer(serializers.ModelSerializer):
+class RecipeWidgetSearchSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(read_only=True, source='category.name')
     image = TumbnailImageField()
     class Meta:
         model = Recipe
-        fields = ("name", "time", "category", "category_name", "count", "image")
+        fields = ("name", "category", "category_name", "image")
+
+class RecipeSearchSerializer(serializers.ModelSerializer):
+    category_name = serializers.CharField(read_only=True, source='category.name')
+    image = ImageField()
+    views_count = serializers.IntegerField(read_only=True)
+    comments_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Recipe
+        fields = ('id', 'name', 'description', 'category', 'category_name', 'time', 'image', 'count',
+                  'views_count', 'comments_count',
+                  )
+
+class CategorySerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Category
+        fields = ("id", "name",)
