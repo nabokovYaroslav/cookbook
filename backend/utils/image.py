@@ -98,8 +98,8 @@ def get_adaptive_image(url, extension_image):
     return "{}.{}".format(path, ext)
 
 def get_tumbnail(url, extension_image):
-    if extension_image == None:
-        return url
-    path, ext = os.path.splitext(url)
-    ext = extension_image
-    return "{}-{}x{}.{}".format(path, TUMBNAIL_SIZE[0], TUMBNAIL_SIZE[1], ext)
+	path, ext = os.path.splitext(url)
+	ext = ext.replace(".", "")
+	if extension_image is not None:
+		ext = extension_image
+	return "{}-{}x{}.{}".format(path, TUMBNAIL_SIZE[0], TUMBNAIL_SIZE[1], ext)

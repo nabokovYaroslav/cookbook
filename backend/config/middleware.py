@@ -13,7 +13,6 @@ class ExtensionMiddleware:
 
     def __call__(self, request):
         request.META["extension_image"] = get_extenstion(extenstions=extenstions, http_accepts=request.META.get("HTTP_ACCEPT", None))
-
         response = self.get_response(request)
 
         # Code to be executed for each request/response after

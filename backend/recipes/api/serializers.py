@@ -1,8 +1,8 @@
 from django.db import transaction
 from rest_framework import serializers
 
-from recipes.models import Recipe, Ingredient, Step, Comment, View, Category
-from recipes.fields import ImageField, RecursiveField, TumbnailImageField, CustomBase64ImageField
+from recipes.models import Recipe, Ingredient, Step, Comment, View, Category, Unit
+from recipes.fields import ImageField, RecursiveField, TumbnailImageField, CustomBase64ImageField, AdaptiveImage
 from users.api.serializers import UserBasicSerializer
 
 
@@ -43,10 +43,11 @@ class IngredientUpdateSerializer(serializers.ModelSerializer):
         }
 
 class IngredientSerializer(serializers.ModelSerializer):
+    unit_short_name = serializers.CharField(read_only=True, source="unit.short_name")
     
     class Meta:
         model = Ingredient
-        fields = '__all__'
+        fields = ("id", "name", "value", "recipe", "unit", "unit_short_name")
 
 class StepSerializer(serializers.ModelSerializer):
     image = ImageField()
@@ -266,7 +267,7 @@ class RecipeRetrieveSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recipe
         fields = (
-                  'name', 'description', 'result', 'category', 'user', 'time', 'colorie', 'created_at', 
+                  'id', 'name', 'description', 'result', 'category', 'user', 'time', 'colorie', 'created_at', 
                   'protein', 'fat', 'carbohydrate', 'count', 'image', 'ingredients', 'steps', 'views_count',
                   'comments_count', 'category_name', 'user_name'
                   )
@@ -302,7 +303,7 @@ class RecipeWidgetSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Recipe
-        fields = ("name", "time", "category", "category_name", "count", "image")
+        fields = ("id", "name", "time", "category", "category_name", "count", "image")
 
 class RecipeWidgetSearchSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(read_only=True, source='category.name')
@@ -323,8 +324,53 @@ class RecipeSearchSerializer(serializers.ModelSerializer):
                   'views_count', 'comments_count',
                   )
 
-class CategorySerializer(serializers.ModelSerializer):
+class CategoryListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Category
         fields = ("id", "name",)
+
+class CategoryRetrieveSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Category
+        fields = "__all__"
+
+class RecipeRandomSerializer(serializers.ModelSerializer):
+    category_name = serializers.CharField(read_only=True, source="category.name") 
+    image = AdaptiveImage()
+    
+    class Meta:
+        model = Recipe
+        fields = ("id", "category", "category_name", "image", "name", "description")
+
+class IngredientEditSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Ingredient
+        fields = ("id", "name", "unit", "value")
+
+class StepEditSerializer(serializers.ModelSerializer):
+    image = CustomBase64ImageField(represent_in_base64=True)
+
+    class Meta:
+        model = Step
+        fields = ("id", "image", "description",)
+
+class RecipeEditSerializer(serializers.ModelSerializer):
+    ingredients = IngredientEditSerializer(many=True)
+    steps = StepEditSerializer(many=True)
+    image = CustomBase64ImageField(represent_in_base64=True)
+
+    class Meta:
+        model = Recipe
+        fields = (
+                  'id', 'name', 'description', 'result', 'category', 'time', 'colorie', 
+                  'protein', 'fat', 'carbohydrate', 'count', 'image', 'ingredients', 'steps',
+                  )
+
+class UnitSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Unit
+        fields = "__all__"   

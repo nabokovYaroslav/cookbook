@@ -1,5 +1,8 @@
 from rest_framework import viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
+from rest_framework.response import Response
+from rest_framework.status import HTTP_200_OK
 
 from users.models import User
 from users.api.serializers import UserSerializer, UserBasicSerializer, RegisterUserSerializer
@@ -14,7 +17,8 @@ class UserViewset(viewsets.ModelViewSet):
         if self.action == 'create':
             return RegisterUserSerializer
         elif self.action == "retrieve":
-            if IsOwnerOrIsAdmin().has_permission(request=self.request, view=self):
+            obj = self.get_object()
+            if IsOwnerOrIsAdmin().has_object_permission(request=self.request, view=self, obj=obj):
                 return UserSerializer
             else:
                 return UserBasicSerializer
@@ -37,3 +41,9 @@ class UserViewset(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return User.objects.all()
+
+    @action(detail=False, methods=("post",))
+    def logout(self, request):
+        response = Response(status=HTTP_200_OK)
+        response.delete_cookie("refresh")
+        return response

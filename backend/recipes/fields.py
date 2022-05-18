@@ -1,3 +1,5 @@
+import magic
+
 from rest_framework.fields import ImageField as BaseImageField
 from rest_framework.serializers import Serializer
 from drf_extra_fields.fields import Base64ImageField
@@ -7,6 +9,12 @@ from django.utils.translation import gettext_lazy as _
 from utils.image import get_adaptive_image, get_tumbnail
 from utils.srcset import get_srcset
 
+
+class AdaptiveImage(BaseImageField):
+    def to_representation(self, value):
+        url = super().to_representation(value)
+        extension_image = self.context.get("extension_image", None)
+        return get_adaptive_image(url, extension_image)
 
 class ImageField(BaseImageField):
     def to_representation(self, value):
@@ -38,3 +46,8 @@ class CustomBase64ImageField(Base64ImageField):
         if base64_data in self.EMPTY_VALUES:
             raise ValidationError(_("Invalid type. This is not an base64 string: {}".format(type(base64_data))))
         return super().to_internal_value(base64_data)
+
+    def to_representation(self, file):
+        base64_data = super().to_representation(file)
+        mime = magic.from_file(file.path, mime=True)
+        return "data:{mime};base64,{base64_data}".format(mime=mime, base64_data=base64_data)

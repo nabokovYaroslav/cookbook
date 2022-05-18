@@ -4,10 +4,14 @@ from rest_framework.permissions import BasePermission
 class IsOwnerOrIsAdmin(BasePermission):
 
   def has_permission(self, request, view):
-    user = request.user
-    user_id = request.data.get("user", None)
-    is_admin = user.is_staff
-    is_owner = False
-    if user_id:
-      is_owner = user.id == int(user_id)
-    return is_owner or is_admin 
+    return request.user.is_staff or request.user.id
+
+  def has_object_permission(self, request, view, obj):
+      user = request.user
+      is_admin = user.is_staff
+      is_user_instance = False
+      if hasattr(obj, "is_staff"):
+        is_user_instance = True
+      if is_user_instance:
+        return user.id == obj.id or is_admin
+      return user.id == obj.user_id or is_admin
