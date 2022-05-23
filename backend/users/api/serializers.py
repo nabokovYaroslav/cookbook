@@ -19,14 +19,17 @@ class RegisterUserSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
   image = TumbnailImageField(required=False)
   user = serializers.IntegerField(read_only=True, source='id')
+  is_subscriber = serializers.BooleanField(read_only=True)
+
   class Meta:
     model = User
-    fields = ('user', 'email', 'user_name', 'image')
+    fields = ('user', 'email', 'user_name', 'image', 'is_subscriber')
     lookup_field = "user_name"
 
 class UserBasicSerializer(serializers.ModelSerializer):
   image = TumbnailImageField(required=False)
   user = serializers.IntegerField(read_only=True, source='id')
+  
   class Meta:
     model = User
     fields = ('user', 'user_name', 'image')

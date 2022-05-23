@@ -30,3 +30,22 @@ services:
       - ./postgresql_dev/data:/var/lib/postgresql/data
     env_file:
       - ./.env.db
+  redis:
+    image: "redis:alpine"
+  celery-worker:
+    build: ./backend
+    command: celery -A config worker -l INFO
+    env_file:
+      - ./.env
+    depends_on:
+      - backend
+      - redis
+  celery-beat:
+    build: ./backend
+    command: celery -A config beat -l INFO
+    env_file:
+      - ./.env
+    depends_on:
+      - backend
+      - redis
+      - celery-worker

@@ -282,7 +282,7 @@ class CommentListSerializer(serializers.ModelSerializer):
     user = UserBasicSerializer(read_only=True)
     class Meta:
         model = Comment
-        fields = ("user", "reply_to", "recipe", "text", "datetime", "answers")
+        fields = ("id", "user", "reply_to", "recipe", "text", "datetime", "answers")
 
 class CommentCreateDestroySerializer(serializers.ModelSerializer):
     datetime = serializers.DateTimeField(read_only=True)
@@ -292,7 +292,8 @@ class CommentCreateDestroySerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class ViewSerializer(serializers.ModelSerializer):
-
+    datetime = serializers.DateTimeField(read_only=True)
+    
     class Meta:
         model = View
         fields = "__all__"
@@ -310,7 +311,7 @@ class RecipeWidgetSearchSerializer(serializers.ModelSerializer):
     image = TumbnailImageField()
     class Meta:
         model = Recipe
-        fields = ("name", "category", "category_name", "image")
+        fields = ("id", "name", "category", "category_name", "image")
 
 class RecipeSearchSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(read_only=True, source='category.name')

@@ -148,6 +148,8 @@
               {{ recipe.result }}
             </p>
           </div>
+          <h2>Комментарии</h2>
+          <comment-list :recipeId="recipe.id" class="comments" />
         </div>
         <div class="col-12 col-lg-4 additional">
           <popular-recipe-widget-list />
@@ -160,11 +162,14 @@
 </template>
 
 <script>
+import { mapGetters, mapActions } from "vuex";
 import PopularRecipeWidgetList from "@/components/PopularRecipeWidgetList";
 import WeekRecipeWidgetList from "@/components/WeekRecipeWidgetList";
 import FeedForm from "@/components/FeedForm";
 import IngredientList from "@/components/IngredientList";
+import CommentList from "@/components/CommentList";
 import { Recipe } from "@/api/recipe";
+import { View } from "@/api/view";
 
 export default {
   components: {
@@ -172,15 +177,57 @@ export default {
     FeedForm,
     WeekRecipeWidgetList,
     IngredientList,
+    CommentList,
   },
   data() {
     return {
       recipe: null,
+      recipeIsLoading: false,
+      userIsLoadingUnwatch: null,
     };
   },
+  computed: {
+    ...mapGetters("user", {
+      authenticated: "authenticated",
+      userIsLoading: "userIsLoading",
+      user: "user",
+    }),
+  },
+  methods: {
+    ...mapActions("user", {
+      logout: "logout",
+    }),
+    sendView() {
+      View.create(this.$route.params.id, this.user.user).catch(() => {});
+    },
+  },
   async created() {
-    const response = await Recipe.detail(this.$route.params.id);
-    this.recipe = response.data;
+    try {
+      this.recipeIsLoading = true;
+      const response = await Recipe.detail(this.$route.params.id);
+      this.recipe = response.data;
+    } catch (error) {
+      if (error.response) {
+        const response = error.response;
+        const status = response.status;
+        if (status != 404) {
+          throw error;
+        }
+      }
+      throw error;
+    } finally {
+      this.recipeIsLoading = false;
+    }
+    if (this.authenticated) {
+      this.sendView();
+    } else {
+      this.authenticatedUnwatch = this.$watch("userIsLoading", () => {
+        if (this.authenticated) {
+          this.sendView();
+        }
+        this.userIsLoadingUnwatch();
+      });
+    }
   },
 };
 </script>
@@ -194,6 +241,10 @@ export default {
   background-color: #fff;
 }
 
+.content .comments {
+  padding: 50px 0;
+}
+
 .content .recipe-image {
   margin-left: -30px;
   position: relative;
@@ -201,7 +252,7 @@ export default {
 
 .content .recipe-image img {
   width: calc(100% + 30px);
-  min-height: 400px;
+  height: 400px;
   object-fit: cover;
   display: block;
 }
@@ -416,6 +467,16 @@ export default {
     max-width: none;
     flex: none;
     margin-top: 15px;
+  }
+}
+
+.additional {
+  display: none;
+}
+
+@media (min-width: 992px) {
+  .additional {
+    display: block;
   }
 }
 

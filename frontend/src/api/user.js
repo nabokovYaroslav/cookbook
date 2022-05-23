@@ -32,4 +32,12 @@ export const User = {
     const response = await HTTP.post("users/logout/");
     return response;
   },
+  async subscribe(username) {
+    const response = await HTTP_AUTH.post(`users/${username}/subscribe/`);
+    return response;
+  },
+  async unsubscribe(username) {
+    const response = await HTTP_AUTH.post(`users/${username}/unsubscribe/`);
+    return response;
+  },
 };

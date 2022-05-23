@@ -17,6 +17,7 @@ export default {
   state: {
     user: null,
     userIsLoading: false,
+    isSubscribing: false,
   },
   getters: {
     userIsLoading(state) {
@@ -27,6 +28,9 @@ export default {
     },
     user(state) {
       return state.user;
+    },
+    isSubscribing(state) {
+      return state.isSubscribing;
     },
     hasAccessToken() {
       return hasAccessToken;
@@ -42,6 +46,12 @@ export default {
     setUser(state, user) {
       state.user = user;
     },
+    setUserIsSubscriber(state, isSubscriber) {
+      state.user.is_subscriber = isSubscriber;
+    },
+    setIsSubscribing(state, isSubscribing) {
+      state.isSubscribing = isSubscribing;
+    },
   },
   actions: {
     async loadUser({ commit }) {
@@ -55,7 +65,6 @@ export default {
         } catch (error) {
           commit("setUser", null);
           await this.logout();
-          throw error;
         } finally {
           commit("setUserIsLoading", false);
         }
@@ -76,6 +85,46 @@ export default {
       await User.logout();
       localStorage.removeItem("access_token");
       commit("setUser", null);
+    },
+
+    async subscribe({ commit, getters }) {
+      try {
+        commit("setIsSubscribing", true);
+        await User.subscribe(getters.user.user_name);
+        commit("setUserIsSubscriber", true);
+      } catch (error) {
+        if (error.response) {
+          const response = error.response;
+          const status = response.status;
+          if (status == 400) {
+            commit("setUserIsSubscriber", true);
+          } else if (status == 401) {
+            await this.logout();
+          }
+        }
+      } finally {
+        commit("setIsSubscribing", false);
+      }
+    },
+
+    async unsubscribe({ commit, getters }) {
+      try {
+        commit("setIsSubscribing", true);
+        await User.unsubscribe(getters.user.user_name);
+        commit("setUserIsSubscriber", false);
+      } catch (error) {
+        if (error.response) {
+          const response = error.response;
+          const status = response.status;
+          if (status == 404) {
+            commit("setUserIsSubscriber", false);
+          } else if (status == 401) {
+            await this.logout();
+          }
+        }
+      } finally {
+        commit("setIsSubscribing", false);
+      }
     },
   },
 };

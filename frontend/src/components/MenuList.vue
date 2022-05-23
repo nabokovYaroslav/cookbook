@@ -11,20 +11,16 @@
 
 <script>
 import MenuItem from "@/components/MenuItem";
-import { Category } from "@/api/category";
 
 export default {
   components: {
     MenuItem,
   },
-  data() {
-    return {
-      categories: [],
-    };
-  },
-  async created() {
-    const response = await Category.list();
-    this.categories = response.data;
+  props: {
+    categories: {
+      type: Array,
+      required: true,
+    },
   },
 };
 </script>

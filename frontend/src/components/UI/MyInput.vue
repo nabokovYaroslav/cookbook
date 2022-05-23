@@ -16,7 +16,7 @@ export default {
 <style scoped>
 input {
   width: 100%;
-  padding: 10px 45px 10px 12px;
+  padding: 10px 12px 10px 12px;
   border: 1px solid #ced4da;
   outline: 0;
   transition: 0.15s;

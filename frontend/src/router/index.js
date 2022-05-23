@@ -10,6 +10,7 @@ import UserRecipesView from "@/views/UserRecipesView";
 import UserProfileView from "@/views/UserProfileView";
 import UserAddRecipeView from "@/views/UserAddRecipeView";
 import UserEditRecipeView from "@/views/UserEditRecipeView";
+import SearchView from "@/views/SearchView";
 
 Vue.use(VueRouter);
 
@@ -38,6 +39,11 @@ const routes = [
     path: "/categories/:category_id/recipes/:id",
     name: "recipe",
     component: RecipeView,
+  },
+  {
+    path: "/search",
+    name: "search",
+    component: SearchView,
   },
   {
     path: "/:username",

@@ -23,22 +23,7 @@
             </router-link>
           </div>
           <div class="col-12 col-lg-6 search">
-            <form>
-              <input type="text" />
-              <button type="submit">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  class="bi bi-search"
-                  viewBox="0 0 16 16"
-                >
-                  <path
-                    d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"
-                  />
-                </svg>
-              </button>
-            </form>
+            <search-widget />
           </div>
           <div class="col-auto sign-in" v-if="!userIsLoading && !authenticated">
             <router-link :to="{ name: 'login' }">Войти</router-link>
@@ -57,7 +42,7 @@
             </router-link>
           </div>
           <div class="col-auto burger">
-            <a href="#">
+            <a href="#" @click.prevent="isBurgerActive = !isBurgerActive">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="16"
@@ -78,10 +63,17 @@
     </header>
     <nav>
       <div class="container">
-        <menu-list></menu-list>
+        <menu-list :categories="categories"></menu-list>
       </div>
     </nav>
-    <router-view />
+    <mobile-menu-list
+      :categories="categories"
+      :active="isBurgerActive"
+      @close="isBurgerActive = false"
+    />
+    <router-view
+      :key="`${$route.params.username}${$route.params.id}${$route.params.category_id}`"
+    />
     <footer>
       <div class="container">
         <p>COPYRIGHT © 2021-2022 | ALL RIGHTS RESERVED.</p>
@@ -93,12 +85,23 @@
 <script>
 import { mapActions, mapGetters } from "vuex";
 import MenuList from "@/components/MenuList";
+import MobileMenuList from "@/components/MobileMenuList";
 import MySpinner from "@/components/MySpinner";
+import SearchWidget from "@/components/SearchWidget";
+import { Category } from "@/api/category";
 
 export default {
   components: {
     MenuList,
     MySpinner,
+    MobileMenuList,
+    SearchWidget,
+  },
+  data() {
+    return {
+      categories: [],
+      isBurgerActive: false,
+    };
   },
   computed: {
     ...mapGetters("user", {
@@ -113,7 +116,18 @@ export default {
     }),
   },
   async created() {
-    await this.loadUser();
+    this.loadUser();
+    const response = await Category.list();
+    this.categories = response.data;
+  },
+  watch: {
+    isBurgerActive(value) {
+      if (value == true) {
+        document.documentElement.style.overflow = "hidden";
+      } else {
+        document.documentElement.style.overflow = "auto";
+      }
+    },
   },
 };
 </script>
@@ -185,47 +199,6 @@ header .search {
   justify-self: flex-end;
 }
 
-header form input {
-  width: 100%;
-  padding: 10px 45px 10px 12px;
-  border: 1px solid #ced4da;
-  outline: 0;
-  transition: 0.15s;
-  font-size: 100%;
-}
-
-header form input:focus {
-  color: #222;
-  border-color: #80bdff;
-}
-
-header form {
-  position: relative;
-}
-
-header form button svg {
-  width: 16px;
-  height: 16px;
-}
-
-header form button {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  border: none;
-  background: 0 0;
-  cursor: pointer;
-  opacity: 0.6;
-  transition: all 0.3s;
-  height: 100%;
-  width: 40px;
-}
-
-header form button:hover {
-  opacity: 1;
-}
-
 header .burger svg {
   width: 32px;
   height: 32px;
@@ -268,7 +241,6 @@ nav {
   display: none;
   background-color: #fff;
   position: relative;
-  z-index: 20;
 }
 
 @media (min-width: 992px) {

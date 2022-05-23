@@ -116,4 +116,18 @@ export const Recipe = {
     const response = await HTTP.get("recipes/random_recipes/");
     return response;
   },
+
+  async search_widget(name, signal) {
+    const response = await HTTP.get(`recipes/search_widget?name=${name}`, {
+      signal: signal,
+    });
+    return response;
+  },
+
+  async search(name, signal) {
+    const response = await HTTP.get(`recipes/search?name=${name}`, {
+      signal: signal,
+    });
+    return response;
+  },
 };

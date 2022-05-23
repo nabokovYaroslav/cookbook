@@ -19,19 +19,39 @@
           >
             Изменить
           </router-link>
-          <my-button>Удалить</my-button>
+          <my-button
+            @click.native="
+              recipeIdToDelete = recipe.id;
+              isShowDeleteRecipeForm = true;
+            "
+            >Удалить</my-button
+          >
         </div>
       </div>
     </div>
     <div class="recipes-empty" v-if="!recipesIsLoading && recipes.length === 0">
       Пока нет рецептов
     </div>
+    <my-dialog
+      :show="isShowDeleteRecipeForm"
+      :lock="isLockDeleteRecipeForm"
+      @hide="closeDeleteRecipeForm"
+    >
+      <delete-recipe-form
+        :recipeId="recipeIdToDelete"
+        @delete="onRecipeDeleted"
+        @close="closeDeleteRecipeForm"
+        @formSubmitting="onFormSubmitting"
+      />
+    </my-dialog>
   </div>
 </template>
 
 <script>
 import MyButton from "@/components/UI/MyButton";
 import MySpinner from "@/components/MySpinner";
+import MyDialog from "@/components/UI/MyDialog";
+import DeleteRecipeForm from "@/components/DeleteRecipeForm";
 import { RecipeUser } from "@/api/recipeUser";
 import RecipeItem from "@/components/RecipeItem";
 export default {
@@ -39,6 +59,8 @@ export default {
     RecipeItem,
     MyButton,
     MySpinner,
+    MyDialog,
+    DeleteRecipeForm,
   },
   props: {
     wrapperClass: {
@@ -58,6 +80,9 @@ export default {
     return {
       recipes: null,
       recipesIsLoading: false,
+      isShowDeleteRecipeForm: false,
+      recipeIdToDelete: null,
+      isLockDeleteRecipeForm: false,
     };
   },
   async created() {
@@ -70,6 +95,24 @@ export default {
     } finally {
       this.recipesIsLoading = false;
     }
+  },
+  methods: {
+    closeDeleteRecipeForm() {
+      this.recipeIdToDelete = null;
+      this.isShowDeleteRecipeForm = false;
+    },
+    onRecipeDeleted(recipeId) {
+      const index = this.recipes
+        .map((recipe) => {
+          return recipe.id;
+        })
+        .indexOf(recipeId);
+      this.recipes.splice(index, 1);
+      this.closeDeleteRecipeForm();
+    },
+    onFormSubmitting(lock) {
+      this.isLockDeleteRecipeForm = lock;
+    },
   },
 };
 </script>

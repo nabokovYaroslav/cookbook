@@ -124,7 +124,7 @@ class Step(models.Model):
                 self.image = change_resolution_of_image_in_memory(self.image)
                 is_new_image = True
             else:
-                self.image = instance.image.path
+                self.image = instance.image
         else:
             is_new_image = True
             self.image = change_resolution_of_image_in_memory(self.image)
@@ -151,6 +151,13 @@ class View(models.Model):
 class Comment(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Пользователь")
     reply_to = models.ForeignKey('self', related_name="answers", on_delete=models.CASCADE, null=True, blank=True, verbose_name="Ответ к комментарию")
-    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, verbose_name="Рецепт")
+    recipe = models.ForeignKey(Recipe, related_name="comments", on_delete=models.CASCADE, verbose_name="Рецепт")
     text = models.TextField(verbose_name="Текст комментария")
     datetime = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+
+class Subscriber(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, verbose_name="Пользователь")
+
+    class Meta:
+        verbose_name = 'Подписчик'
+        verbose_name_plural = 'Подписчики'

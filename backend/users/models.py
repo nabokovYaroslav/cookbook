@@ -28,6 +28,12 @@ class User(AbstractBaseUser, PermissionsMixin):
   is_active = models.BooleanField(default=True)
   objects = UserManager()
 
+  @property
+  def is_subscriber(self):
+    if(hasattr(self, "subscriber")):
+      return True
+    return False
+
   USERNAME_FIELD = 'email'
   REQUIRED_FIELDS = ['user_name']
 

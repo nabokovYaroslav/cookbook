@@ -6,7 +6,7 @@ from django.db.models import Count, Q
 from django.db.models.functions import Lower
 
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
-from rest_framework import mixins
+from rest_framework import mixins, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.pagination import PageNumberPagination
@@ -81,9 +81,9 @@ class RecipeViewSet(ModelViewSet):
     
     def get_queryset(self):
         if self.action == "list":
-            return Recipe.objects.select_related("category").annotate(views_count=Count("views")).annotate(comments_count=Count('comment'))
+            return Recipe.objects.select_related("category").annotate(views_count=Count("views", distinct=True)).annotate(comments_count=Count('comments', distinct=True))
         elif self.action == "retrieve":
-            return Recipe.objects.select_related("category", "user").prefetch_related("ingredients", "steps").annotate(views_count=Count('views')).annotate(comments_count=Count('comment'))
+            return Recipe.objects.select_related("category", "user").prefetch_related("ingredients", "steps").annotate(views_count=Count('views', distinct=True)).annotate(comments_count=Count('comments', distinct=True))
         elif self.action == "destroy":
             return Recipe.objects.all()
         return Recipe.objects.prefetch_related("ingredients", "steps")
@@ -94,8 +94,8 @@ class RecipeViewSet(ModelViewSet):
                     Recipe
                     .objects
                     .select_related("category")
-                    .annotate(views_count=Count("views", filter=Q(views__datetime__range=(timezone.now(), timezone.now() - timedelta(days=7)))))
-                    .annotate(comments_count=Count('comment'))
+                    .annotate(views_count=Count("views", filter=Q(views__datetime__range=(timezone.now() - timedelta(days=7), timezone.now())), distinct=True))
+                    .annotate(comments_count=Count('comments', distinct=True))
                     .order_by("-views_count")
                     )
         page = self.paginate_queryset(queryset)
@@ -112,8 +112,8 @@ class RecipeViewSet(ModelViewSet):
                     Recipe
                     .objects
                     .select_related("category")
-                    .annotate(views_count=Count("views"))
-                    .annotate(comments_count=Count('comment'))
+                    .annotate(views_count=Count("views", distinct=True))
+                    .annotate(comments_count=Count('comments', distinct=True))
                     .order_by("-views_count")
                     )
         page = self.paginate_queryset(queryset)
@@ -130,8 +130,8 @@ class RecipeViewSet(ModelViewSet):
                     Recipe
                     .objects
                     .select_related("category")
-                    .annotate(views_count=Count("views"))
-                    .annotate(comments_count=Count('comment'))
+                    .annotate(views_count=Count("views", distinct=True))
+                    .annotate(comments_count=Count('comments', distinct=True))
                     .order_by("-id")
                     )
         page = self.paginate_queryset(queryset)
@@ -148,7 +148,7 @@ class RecipeViewSet(ModelViewSet):
                     Recipe
                     .objects
                     .select_related("category")
-                    .annotate(views_count=Count("views", filter=Q(views__datetime__range=(timezone.now(), timezone.now() - timedelta(days=7)))))
+                    .annotate(views_count=Count("views", filter=Q(views__datetime__range=(timezone.now() - timedelta(days=7), timezone.now())), distinct=True))
                     .order_by("-views_count")
                     )
         page = self.paginate_queryset(queryset)
@@ -165,7 +165,7 @@ class RecipeViewSet(ModelViewSet):
                     Recipe
                     .objects
                     .select_related("category")
-                    .annotate(views_count=Count("views"))
+                    .annotate(views_count=Count("views", distinct=True))
                     .order_by("-views_count")
                     )
         page = self.paginate_queryset(queryset)
@@ -200,8 +200,8 @@ class RecipeViewSet(ModelViewSet):
                     Recipe
                     .objects
                     .select_related("category")
-                    .annotate(views_count=Count("views"))
-                    .annotate(comments_count=Count('comment'))
+                    .annotate(views_count=Count("views", distinct=True))
+                    .annotate(comments_count=Count('comments', distinct=True))
                     )
         name = request.query_params.get("name")
         if name is not None:
@@ -258,7 +258,7 @@ class CategoryRecipeViewSet(GenericViewSet, mixins.ListModelMixin):
     def get_queryset(self):
         category_pk = self.kwargs.get("category_pk", None)
         base_queryset = Recipe.objects.filter(category_id=category_pk)
-        return base_queryset.select_related("category").annotate(views_count=Count("views")).annotate(comments_count=Count('comment'))
+        return base_queryset.select_related("category").annotate(views_count=Count("views", distinct=True)).annotate(comments_count=Count('comments', distinct=True))
 
 class UserRecipeViewSet(GenericViewSet, mixins.ListModelMixin):
     serializer_class = RecipeListSerializer
@@ -272,36 +272,69 @@ class UserRecipeViewSet(GenericViewSet, mixins.ListModelMixin):
     def get_queryset(self):
         user_name = self.kwargs.get("user_user_name", None)
         base_queryset = Recipe.objects.filter(user__user_name=user_name)
-        return base_queryset.select_related("category", "user").annotate(views_count=Count("views")).annotate(comments_count=Count('comment'))
+        return base_queryset.select_related("category", "user").annotate(views_count=Count("views", distinct=True)).annotate(comments_count=Count('comments', distinct=True))
 
 class ViewViewSet(GenericViewSet, mixins.CreateModelMixin):
     serializer_class = ViewSerializer
-    permission_classes = (IsAuthenticated, IsOwnerOrIsAdmin)
+    permission_classes = (IsAuthenticated,)
 
-class RecipeCommentViewSet(GenericViewSet, mixins.CreateModelMixin, mixins.DestroyModelMixin, mixins.ListModelMixin):
+class RecipeCommentViewSet(GenericViewSet, mixins.ListModelMixin):
     pagination_class = StandardResultsSetPagination
+
+    def list(self, request, *args, **kwargs):
+        get_all = request.query_params.get("all", None)
+        if get_all is not None and get_all == "true":
+            queryset = self.get_queryset()
+            page = request.query_params.get("page", None)
+            if page is not None:
+                offset = self.paginator.page_size * (int(page) - 1)
+                queryset = queryset[offset:]
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
+        return super().list(request, *args, **kwargs)
 
     def get_queryset(self):
         recipe_pk = self.kwargs.get("recipe_pk", None)
-        base_queryset = Comment.objects.filter(recipe_id=recipe_pk)
+        base_queryset = Comment.objects.filter(recipe_id=recipe_pk, reply_to=None)
         return base_queryset.select_related("user")
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        if self.action == "list":
-            context["extension_image"] = self.request.META["extension_image"]
+        context["extension_image"] = self.request.META["extension_image"]
         return context
 
     def get_serializer_class(self):
-        if self.action == "list":
-            return CommentListSerializer
-        return CommentCreateDestroySerializer
+        return CommentListSerializer
     
     def get_permissions(self):
-        if self.action in ("create", "destroy"):
-            permission_classes = (IsAuthenticated, IsOwnerOrIsAdmin,) 
-        else:
-            permission_classes = (AllowAny,)
+        permission_classes = (AllowAny,)
+        return (permission() for permission in permission_classes)
+
+class CommentViewSet(GenericViewSet, mixins.CreateModelMixin):
+    serializer_class = CommentCreateDestroySerializer
+
+    # https://github.com/encode/django-rest-framework/issues/1563
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        comment = Comment.objects.create(
+                                         user_id=serializer.data["user"], 
+                                         recipe_id=serializer.data["recipe"], 
+                                         reply_to_id=serializer.data["reply_to"],
+                                         text=serializer.data["text"]
+                                         )
+        headers = self.get_success_headers(serializer.data)
+        serializer = CommentListSerializer(instance=comment, context=self.get_serializer_context())
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["extension_image"] = self.request.META["extension_image"]
+        return context
+
+    def get_permissions(self):
+        if self.action in ("create"):
+            permission_classes = (IsAuthenticated,) 
         return (permission() for permission in permission_classes)
 
 class UnitViewSet(GenericViewSet, mixins.ListModelMixin):
