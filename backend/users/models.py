@@ -1,4 +1,3 @@
-from email.policy import default
 import os
 
 from django.db import models
@@ -44,10 +43,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     except User.DoesNotExist:
       instance = None
     if instance is not None:
-      if compare_images(instance.image.path, self.image):
+      if not compare_images(instance.image.path, self.image):
         delete_images(instance.image.path)
         self.image = change_resolution_of_image_in_memory(self.image)
         is_new_image = True
+      else:
+        self.image = instance.image
     else:
       is_new_image = True
       self.image = change_resolution_of_image_in_memory(self.image)
